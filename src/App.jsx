@@ -14,20 +14,20 @@ const logEvent = (eventName, params = {}) => {
   if (window.gtag) { window.gtag('event', eventName, params); }
 };
 
-// --- DATA (UPDATED: Matching your actual double extensions) ---
+// --- DATA (Linked to Clean Single-Extension Filenames) ---
 const lookbook = [
-  { id: 1, title: "Urban Solitude", image: "/obsidian-black.jpg.png", product: { name: "Obsidian Black", price: 25 } },
-  { id: 2, title: "Concrete Textures", image: "/charcoal-grey.jpg.jpg", product: { name: "Engineered Charcoal", price: 25 } },
-  { id: 3, title: "Natural Light", image: "/bone-white.jpg.png", product: { name: "Bone Off-White", price: 25 } }
+  { id: 1, title: "Urban Solitude", image: "/obsidian-black.png", product: { name: "Obsidian Black", price: 25 } },
+  { id: 2, title: "Concrete Textures", image: "/charcoal-grey.jpg", product: { name: "Engineered Charcoal", price: 25 } },
+  { id: 3, title: "Natural Light", image: "/bone-white.png", product: { name: "Bone Off-White", price: 25 } }
 ];
 
 const products = [
-  { id: 1, name: "Obsidian Black", price: 25, stock: "04/10", image: "/obsidian-black.jpg.png", description: "Deep matte black finish. 260GSM heavyweight cotton. Pre-shrunk and engineered for the perfect drape." },
-  { id: 2, name: "Bone Off-White", price: 25, stock: "03/10", image: "/bone-white.jpg.png", description: "Natural unbleached tone. 260GSM heavyweight cotton. Soft hand-feel with structural integrity." },
-  { id: 3, name: "Engineered Charcoal", price: 25, stock: "03/10", image: "/charcoal-grey.jpg.jpg", description: "Industrial slate grey. 260GSM heavyweight cotton. Reactive dyed for lasting color depth." },
-  { id: 4, name: "Archive Olive", price: 25, stock: "02/10", image: "/archive-olive.jpg.jpg", description: "Vintage washed earth tone. 260GSM heavyweight cotton. A subtle, sophisticated essential." },
-  { id: 5, name: "Forest Green", price: 25, stock: "Sold Out", image: "/forest-green.jpg.jpg", description: "Deep earthy green. 260GSM heavyweight cotton. Inspired by Zimbabwean landscapes." },
-  { id: 6, name: "Mocha Brown", price: 25, stock: "01/10", image: "/mocha-brown.jpg.jpg", description: "Rich coffee tone. 260GSM heavyweight cotton. Warm, neutral, and versatile." }
+  { id: 1, name: "Obsidian Black", price: 25, stock: "04/10", image: "/obsidian-black.png", description: "Deep matte black finish. 260GSM heavyweight cotton. Pre-shrunk and engineered for the perfect drape." },
+  { id: 2, name: "Bone Off-White", price: 25, stock: "03/10", image: "/bone-white.png", description: "Natural unbleached tone. 260GSM heavyweight cotton. Soft hand-feel with structural integrity." },
+  { id: 3, name: "Engineered Charcoal", price: 25, stock: "03/10", image: "/charcoal-grey.jpg", description: "Industrial slate grey. 260GSM heavyweight cotton. Reactive dyed for lasting color depth." },
+  { id: 4, name: "Archive Olive", price: 25, stock: "02/10", image: "/archive-olive.jpg", description: "Vintage washed earth tone. 260GSM heavyweight cotton. A subtle, sophisticated essential." },
+  { id: 5, name: "Forest Green", price: 25, stock: "Sold Out", image: "/forest-green.jpg", description: "Deep earthy green. 260GSM heavyweight cotton. Inspired by Zimbabwean landscapes." },
+  { id: 6, name: "Mocha Brown", price: 25, stock: "01/10", image: "/mocha-brown.jpg", description: "Rich coffee tone. 260GSM heavyweight cotton. Warm, neutral, and versatile." }
 ];
 
 const alphaCollection = products.slice(0, 3);
@@ -101,7 +101,7 @@ const ProductModal = ({ product, onClose, onAdd }) => {
     { name: "Obsidian Black", hex: "#111111" },
     { name: "Bone Off-White", hex: "#EAEAEA" },
     { name: "Engineered Charcoal", hex: "#374151" },
-    { name: "Midnight Navy", hex: "#172554" },
+    { name: "Archive Olive", hex: "#5d5c52" },
     { name: "Forest Green", hex: "#064E3B" },
     { name: "Mocha Brown", hex: "#3F2C22" }
   ];
@@ -182,8 +182,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="relative h-[100svh] w-full flex flex-col items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0 overflow-hidden bg-black">
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a] z-10" />
-            {/* HERO IMAGE: Linked to your generated black shirt file with correct extension */}
-            <img src="/hero-image.jpg.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-50 grayscale" />
+            {/* HERO IMAGE: Linked to HERO PNG */}
+            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-50 grayscale" />
           </div>
           
           <div className="z-10 text-center px-4 relative max-w-5xl mx-auto flex flex-col items-center">
@@ -214,8 +214,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="py-20 px-6 relative z-10 max-w-6xl mx-auto">
           <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center">
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm order-2 md:order-1 shadow-2xl">
-               {/* FOUNDER IMAGE: Placeholder linked to hero shirt file if founder image not avail, using same as hero for safety */}
-               <img src="/founder-image.jpg.jpg" alt="Founder" className="w-full h-full object-cover grayscale opacity-60" />
+               {/* FOUNDER IMAGE: Linked to FOUNDER JPG */}
+               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover grayscale opacity-60" />
                <div className="absolute bottom-4 left-4 text-[8px] tracking-[0.3em] uppercase text-white bg-black/50 px-2 py-1 backdrop-blur-md">The Engineer's Log</div>
             </div>
             <div className="space-y-8 order-1 md:order-2">
