@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { ChevronRight, Menu, X, ArrowRight, Instagram, MessageCircle, Plus, Quote, ShoppingBag, ArrowLeft, Layers, Ruler, PenTool } from 'lucide-react';
 
@@ -172,6 +172,22 @@ const LandingPage = ({ setView, handleQuickShop }) => {
   const { scrollYProgress } = useScroll();
   const yParallax = useTransform(scrollYProgress, [0, 1], [0, -50]);
 
+  // Alpha Drop Scroll Logic
+  const alphaScrollRef = useRef(null);
+  const [isAlphaEnd, setIsAlphaEnd] = useState(false);
+
+  const handleAlphaScroll = () => {
+    if (alphaScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = alphaScrollRef.current;
+      // Check if user is near the end of the scroll (20px threshold)
+      if (scrollLeft + clientWidth >= scrollWidth - 20) {
+        setIsAlphaEnd(true);
+      } else {
+        setIsAlphaEnd(false);
+      }
+    }
+  };
+
   // Track Page View
   useEffect(() => {
     logEvent('page_view', { page_title: 'Home' });
@@ -267,13 +283,54 @@ const LandingPage = ({ setView, handleQuickShop }) => {
                 <h2 className="text-4xl md:text-6xl font-serif italic tracking-wide mb-2 glass-text-red py-2">Alpha Drop</h2>
                 <p className="text-red-200/80 uppercase text-[10px] tracking-[0.4em] font-bold">Batch 01 // 10 Units // Live</p>
               </div>
-              <button onClick={() => setView('shop')} className="group flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-2 hover:border-white transition-all">
+              
+              {/* DESKTOP View All Button */}
+              <button onClick={() => setView('shop')} className="hidden md:flex group items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-2 hover:border-white transition-all">
                 View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/>
               </button>
+
+              {/* MOBILE Scroll/View Indicator */}
+              <div className="md:hidden text-[10px] tracking-widest text-gray-500 h-6 flex items-end">
+                <AnimatePresence mode="wait">
+                  {!isAlphaEnd ? (
+                    <motion.span 
+                      key="scroll"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="block"
+                    >
+                      SCROLL →
+                    </motion.span>
+                  ) : (
+                    <motion.button 
+                      key="view-all"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      onClick={() => setView('shop')}
+                      className="text-white border-b border-white pb-1"
+                    >
+                      VIEW ALL
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            {/* Scrollable Grid Container */}
+            <div 
+              ref={alphaScrollRef}
+              onScroll={handleAlphaScroll}
+              className="flex overflow-x-auto gap-8 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible pb-4 md:pb-0"
+            >
               {alphaCollection.map((item) => (
-                <motion.div key={item.id} whileHover={{ y: -10 }} onClick={() => handleQuickShop(item)} className="group cursor-pointer">
+                <motion.div 
+                  key={item.id} 
+                  whileHover={{ y: -10 }} 
+                  onClick={() => handleQuickShop(item)} 
+                  className="group cursor-pointer min-w-[85vw] snap-center md:min-w-0 md:w-auto"
+                >
                   <div className="aspect-[3/4] overflow-hidden bg-black/40 mb-4 relative rounded-sm border border-white/10">
                     <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover grayscale opacity-90 group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-700" />
                     <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md px-3 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-red-500/50 shadow-lg">{item.stock} Left</div>
