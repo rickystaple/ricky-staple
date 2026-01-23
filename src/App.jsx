@@ -198,8 +198,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="relative h-[100svh] w-full flex flex-col items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0 overflow-hidden bg-black">
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a] z-10" />
-            {/* HERO IMAGE: Linked to HERO PNG - REMOVED GRAYSCALE */}
-            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-60" />
+            {/* HERO IMAGE: Linked to HERO PNG */}
+            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-50 grayscale" />
           </div>
           
           <div className="z-10 text-center px-4 relative max-w-5xl mx-auto flex flex-col items-center">
@@ -230,8 +230,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="py-20 px-6 relative z-10 max-w-6xl mx-auto">
           <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center">
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm order-2 md:order-1 shadow-2xl">
-               {/* FOUNDER IMAGE: Linked to FOUNDER JPG - REMOVED GRAYSCALE */}
-               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover opacity-80" />
+               {/* FOUNDER IMAGE: Linked to FOUNDER JPG */}
+               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover grayscale opacity-60" />
                <div className="absolute bottom-4 left-4 text-[8px] tracking-[0.3em] uppercase text-white bg-black/50 px-2 py-1 backdrop-blur-md">The Engineer's Log</div>
             </div>
             <div className="space-y-8 order-1 md:order-2">
@@ -266,8 +266,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           <motion.div className="flex overflow-x-auto gap-4 px-6 pb-8 snap-x snap-mandatory scrollbar-hide" style={{ x: yParallax }}>
             {lookbook.map((look) => (
                <div key={look.id} className="min-w-[85vw] md:min-w-[35vw] aspect-[3/4] relative rounded-sm overflow-hidden snap-center group border border-white/5 bg-white/5 shadow-lg">
-                  {/* LOOKBOOK IMAGE - REMOVED GRAYSCALE */}
-                  <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
+                  <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 transition-all duration-700" />
                   <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
                      <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
                      <button onClick={() => handleQuickShop(look.product)} className="text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-1 hover:border-white">Shop Look</button>
@@ -333,8 +332,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
                   className="group cursor-pointer min-w-[85vw] snap-center md:min-w-0 md:w-auto"
                 >
                   <div className="aspect-[3/4] overflow-hidden bg-black/40 mb-4 relative rounded-sm border border-white/10">
-                    {/* ALPHA DROP IMAGE - REMOVED GRAYSCALE */}
-                    <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-100 transition-all duration-700" />
+                    <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover grayscale opacity-90 group-hover:opacity-100 group-hover:grayscale-0 transition-all duration-700" />
                     <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md px-3 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-red-500/50 shadow-lg">{item.stock} Left</div>
                   </div>
                   <div className="flex justify-between items-start mb-4 px-1">
@@ -420,8 +418,7 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
             setSelectedProduct(item);
           }} className="group cursor-pointer">
             <div className="aspect-[3/4] overflow-hidden bg-white/5 mb-4 relative rounded-sm border border-white/5 group-hover:border-white/20 transition-colors">
-              {/* SHOP PAGE IMAGE - REMOVED GRAYSCALE */}
-              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
+              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
               {item.stock !== "Sold Out" ? (
                 <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-white/10">{item.stock} Left</div>
               ) : (
