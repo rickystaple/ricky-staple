@@ -187,6 +187,21 @@ const LandingPage = ({ setView, handleQuickShop }) => {
     }
   };
 
+  // Campaign Scroll Logic
+  const campaignScrollRef = useRef(null);
+  const [isCampaignEnd, setIsCampaignEnd] = useState(false);
+
+  const handleCampaignScroll = () => {
+    if (campaignScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = campaignScrollRef.current;
+      if (scrollLeft + clientWidth >= scrollWidth - 20) {
+        setIsCampaignEnd(true);
+      } else {
+        setIsCampaignEnd(false);
+      }
+    }
+  };
+
   // Track Page View
   useEffect(() => {
     logEvent('page_view', { page_title: 'Home' });
@@ -261,17 +276,56 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           <div className="max-w-7xl mx-auto">
             <div className="mb-8 flex justify-between items-end">
               <h2 className="text-3xl md:text-5xl font-serif italic tracking-wide mb-2 glass-text-green py-2">Campaign</h2>
+              
+              {/* MOBILE Scroll/View Indicator for Campaign */}
+              <div className="md:hidden text-[10px] tracking-widest text-gray-500 h-6 flex items-end">
+                <AnimatePresence mode="wait">
+                  {!isCampaignEnd ? (
+                    <motion.span 
+                      key="scroll"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="block"
+                    >
+                      SCROLL →
+                    </motion.span>
+                  ) : (
+                    <motion.button 
+                      key="view-all"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      onClick={() => setView('shop')}
+                      className="text-white border-b border-white pb-1"
+                    >
+                      VIEW ALL
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            {/* Scrollable Grid Container for Campaign */}
+            <div 
+              ref={campaignScrollRef}
+              onScroll={handleCampaignScroll}
+              className="flex overflow-x-auto gap-8 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible pb-4 md:pb-0"
+            >
               {lookbook.map((look) => (
-                 <div key={look.id} className="aspect-[3/4] relative rounded-sm overflow-hidden group border border-white/5 bg-white/5 shadow-lg cursor-pointer" onClick={() => handleQuickShop(look.product)}>
+                 <motion.div 
+                    key={look.id} 
+                    whileHover={{ y: -5 }}
+                    className="min-w-[85vw] snap-center md:min-w-0 md:w-auto aspect-[3/4] relative rounded-sm overflow-hidden group border border-white/5 bg-white/5 shadow-lg cursor-pointer" 
+                    onClick={() => handleQuickShop(look.product)}
+                 >
                     {/* LOOKBOOK IMAGE - REMOVED GRAYSCALE */}
                     <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
                     <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
                        <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
                        <button className="text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-1 hover:border-white">Shop Look</button>
                     </div>
-                 </div>
+                 </motion.div>
               ))}
             </div>
           </div>
