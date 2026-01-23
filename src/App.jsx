@@ -170,7 +170,6 @@ const ProductModal = ({ product, onClose, onAdd }) => {
 
 const LandingPage = ({ setView, handleQuickShop }) => {
   const { scrollYProgress } = useScroll();
-  const yParallax = useTransform(scrollYProgress, [0, 1], [0, -50]);
 
   // Alpha Drop Scroll Logic
   const alphaScrollRef = useRef(null);
@@ -258,23 +257,24 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           </div>
       </section>
 
-      <section className="py-20 relative z-10">
-          <div className="px-6 mb-8 flex justify-between items-end max-w-7xl mx-auto">
-            <h2 className="text-3xl md:text-5xl font-serif italic tracking-wide mb-2 glass-text-green py-2">Campaign</h2>
-            <div className="text-[10px] tracking-widest text-gray-500">SCROLL →</div>
+      <section className="py-20 px-6 relative z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-8 flex justify-between items-end">
+              <h2 className="text-3xl md:text-5xl font-serif italic tracking-wide mb-2 glass-text-green py-2">Campaign</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {lookbook.map((look) => (
+                 <div key={look.id} className="aspect-[3/4] relative rounded-sm overflow-hidden group border border-white/5 bg-white/5 shadow-lg cursor-pointer" onClick={() => handleQuickShop(look.product)}>
+                    {/* LOOKBOOK IMAGE - REMOVED GRAYSCALE */}
+                    <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
+                    <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
+                       <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
+                       <button className="text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-1 hover:border-white">Shop Look</button>
+                    </div>
+                 </div>
+              ))}
+            </div>
           </div>
-          <motion.div className="flex overflow-x-auto gap-4 px-6 pb-8 snap-x snap-mandatory scrollbar-hide" style={{ x: yParallax }}>
-            {lookbook.map((look) => (
-               <div key={look.id} className="min-w-[85vw] md:min-w-[35vw] aspect-[3/4] relative rounded-sm overflow-hidden snap-center group border border-white/5 bg-white/5 shadow-lg">
-                  {/* LOOKBOOK IMAGE - REMOVED GRAYSCALE */}
-                  <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
-                  <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
-                     <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
-                     <button onClick={() => handleQuickShop(look.product)} className="text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-1 hover:border-white">Shop Look</button>
-                  </div>
-               </div>
-            ))}
-          </motion.div>
       </section>
 
       <section className="py-20 px-6 relative z-10 border-t border-white/5 overflow-hidden">
