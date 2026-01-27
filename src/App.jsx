@@ -467,15 +467,14 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
           <p className="text-[10px] tracking-[0.3em] uppercase text-gray-500 mt-2">Alpha Drop 01 // {products.length} Items</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-8">
         {products.map((item) => (
           <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} onClick={() => {
             logEvent('select_item', { item_name: item.name });
             setSelectedProduct(item);
           }} className="group cursor-pointer">
             <div className="aspect-[3/4] overflow-hidden bg-white/5 mb-4 relative rounded-sm border border-white/5 group-hover:border-white/20 transition-colors">
-              {/* SHOP PAGE IMAGE - REMOVED GRAYSCALE */}
-              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
+              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
               {item.stock !== "Sold Out" ? (
                 <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-white/10">{item.stock} Left</div>
               ) : (
@@ -484,10 +483,10 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
             </div>
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-lg font-serif italic text-white group-hover:text-red-400 transition-colors">{item.name}</h3>
-                <p className="text-[10px] tracking-widest text-gray-500 uppercase mt-1">260GSM Heavyweight</p>
+                <h3 className="text-sm md:text-lg font-serif italic text-white group-hover:text-red-400 transition-colors">{item.name}</h3>
+                <p className="text-[8px] md:text-[10px] tracking-widest text-gray-500 uppercase mt-1">260GSM Heavyweight</p>
               </div>
-              <span className="text-white font-mono">${item.price}</span>
+              <span className="text-sm md:text-base text-white font-mono">${item.price}</span>
             </div>
           </motion.div>
         ))}
