@@ -212,8 +212,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="relative h-[100svh] w-full flex flex-col items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0 overflow-hidden bg-black">
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a] z-10" />
-            {/* HERO IMAGE: Linked to HERO PNG - REMOVED GRAYSCALE */}
-            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-60" />
+            {/* HERO IMAGE: Linked to HERO PNG */}
+            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-50 grayscale" />
           </div>
           
           <div className="z-10 text-center px-4 relative max-w-5xl mx-auto flex flex-col items-center">
@@ -244,8 +244,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="py-20 px-6 relative z-10 max-w-6xl mx-auto">
           <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center">
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm order-2 md:order-1 shadow-2xl">
-               {/* FOUNDER IMAGE: Linked to FOUNDER JPG - REMOVED GRAYSCALE */}
-               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover opacity-80" />
+               {/* FOUNDER IMAGE: Linked to FOUNDER JPG */}
+               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover grayscale opacity-60" />
                <div className="absolute bottom-4 left-4 text-[8px] tracking-[0.3em] uppercase text-white bg-black/50 px-2 py-1 backdrop-blur-md">The Engineer's Log</div>
             </div>
             <div className="space-y-8 order-1 md:order-2">
@@ -258,15 +258,15 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       </section>
 
       <section className="py-16 px-6 relative z-10">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          <div className="max-w-6xl mx-auto grid grid-cols-3 gap-2 md:gap-6 items-start">
             {[
               { title: "Substance", desc: "260GSM Heavyweight." },
               { title: "Fit", desc: "Engineered Silhouette." },
               { title: "Promise", desc: "Built for Longevity." }
             ].map((item, i) => (
-              <div key={i} className="p-8 rounded-sm bg-white/[0.02] border border-white/[0.05] text-center">
-                <h3 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 mb-3">{item.title}</h3>
-                <p className="text-lg font-playfair italic text-gray-300">{item.desc}</p>
+              <div key={i} className="p-2 md:p-8 rounded-sm bg-white/[0.02] border border-white/[0.05] text-center">
+                <h3 className="text-[8px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] uppercase text-gray-500 mb-2 md:mb-3">{item.title}</h3>
+                <p className="text-xs md:text-lg font-playfair italic text-gray-300 leading-tight md:leading-normal">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -467,12 +467,17 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
           <p className="text-[10px] tracking-[0.3em] uppercase text-gray-500 mt-2">Alpha Drop 01 // {products.length} Items</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-8">
+      
+      {/* UPDATED LAYOUT:
+        - Mobile: Horizontal Scroll (flex overflow-x-auto) to save vertical space.
+        - Desktop: Grid layout (grid-cols-3) for standard viewing.
+      */}
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:gap-x-4 md:gap-y-8 md:overflow-visible md:pb-0">
         {products.map((item) => (
           <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} onClick={() => {
             logEvent('select_item', { item_name: item.name });
             setSelectedProduct(item);
-          }} className="group cursor-pointer">
+          }} className="group cursor-pointer min-w-[45vw] snap-center md:min-w-0 md:w-auto">
             <div className="aspect-[3/4] overflow-hidden bg-white/5 mb-4 relative rounded-sm border border-white/5 group-hover:border-white/20 transition-colors">
               <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
               {item.stock !== "Sold Out" ? (
