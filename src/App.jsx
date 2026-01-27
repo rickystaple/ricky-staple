@@ -15,10 +15,11 @@ const logEvent = (eventName, params = {}) => {
 };
 
 // --- DATA (Linked to Clean Single-Extension Filenames) ---
+// Updated Lookbook to feature the Earth Tones (Olive, Green, Brown)
 const lookbook = [
-  { id: 1, title: "Urban Solitude", image: "/obsidian-black.png", product: { name: "Obsidian Black", price: 25 } },
-  { id: 2, title: "Concrete Textures", image: "/charcoal-grey.jpg", product: { name: "Engineered Charcoal", price: 25 } },
-  { id: 3, title: "Natural Light", image: "/bone-white.png", product: { name: "Bone Off-White", price: 25 } }
+  { id: 1, title: "Vintage Archive", image: "/archive-olive.jpg", product: { name: "Archive Olive", price: 25 } },
+  { id: 2, title: "Natural Wilderness", image: "/forest-green.jpg", product: { name: "Forest Green", price: 25 } },
+  { id: 3, title: "Earthen Tones", image: "/mocha-brown.jpg", product: { name: "Mocha Brown", price: 25 } }
 ];
 
 const products = [
@@ -30,6 +31,7 @@ const products = [
   { id: 6, name: "Mocha Brown", price: 25, stock: "01/10", image: "/mocha-brown.jpg", description: "Rich coffee tone. 260GSM heavyweight cotton. Warm, neutral, and versatile." }
 ];
 
+// Alpha Collection: Features Black, Bone, Charcoal (First 3 items)
 const alphaCollection = products.slice(0, 3);
 
 // --- HELPER COMPONENTS ---
@@ -213,7 +215,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           <div className="absolute inset-0 z-0 overflow-hidden bg-black">
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a] z-10" />
             {/* HERO IMAGE: Linked to HERO PNG */}
-            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-50 grayscale" />
+            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-60" />
           </div>
           
           <div className="z-10 text-center px-4 relative max-w-5xl mx-auto flex flex-col items-center">
@@ -245,7 +247,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center">
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm order-2 md:order-1 shadow-2xl">
                {/* FOUNDER IMAGE: Linked to FOUNDER JPG */}
-               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover grayscale opacity-60" />
+               <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover opacity-80" />
                <div className="absolute bottom-4 left-4 text-[8px] tracking-[0.3em] uppercase text-white bg-black/50 px-2 py-1 backdrop-blur-md">The Engineer's Log</div>
             </div>
             <div className="space-y-8 order-1 md:order-2">
@@ -319,7 +321,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
                     className="min-w-[85vw] snap-center md:min-w-0 md:w-auto aspect-[3/4] relative rounded-sm overflow-hidden group border border-white/5 bg-white/5 shadow-lg cursor-pointer" 
                     onClick={() => handleQuickShop(look.product)}
                  >
-                    {/* LOOKBOOK IMAGE - REMOVED GRAYSCALE */}
+                    {/* LOOKBOOK IMAGE */}
                     <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
                     <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
                        <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
@@ -387,7 +389,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
                   className="group cursor-pointer min-w-[85vw] snap-center md:min-w-0 md:w-auto"
                 >
                   <div className="aspect-[3/4] overflow-hidden bg-black/40 mb-4 relative rounded-sm border border-white/10">
-                    {/* ALPHA DROP IMAGE - REMOVED GRAYSCALE */}
+                    {/* ALPHA DROP IMAGE */}
                     <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-100 transition-all duration-700" />
                     <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md px-3 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-red-500/50 shadow-lg">{item.stock} Left</div>
                   </div>
@@ -479,7 +481,8 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
             setSelectedProduct(item);
           }} className="group cursor-pointer min-w-[45vw] snap-center md:min-w-0 md:w-auto">
             <div className="aspect-[3/4] overflow-hidden bg-white/5 mb-4 relative rounded-sm border border-white/5 group-hover:border-white/20 transition-colors">
-              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700" />
+              {/* SHOP PAGE IMAGE */}
+              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
               {item.stock !== "Sold Out" ? (
                 <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-white/10">{item.stock} Left</div>
               ) : (
