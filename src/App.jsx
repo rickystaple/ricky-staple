@@ -791,18 +791,30 @@ const App = () => {
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   
+  const clickTimeoutRef = useRef(null);
+  
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   const { scrollY } = useScroll();
 
   const handleLogoClick = () => {
-    setAdminClicks(prev => prev + 1);
-    if (adminClicks + 1 === 5) {
-      setIsAdminLoginOpen(true);
-      setAdminClicks(0);
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
     }
-    setTimeout(() => setAdminClicks(0), 2000);
+
+    setAdminClicks(prev => {
+      const newCount = prev + 1;
+      if (newCount === 5) {
+        setIsAdminLoginOpen(true);
+        return 0; 
+      }
+      return newCount;
+    });
+
+    clickTimeoutRef.current = setTimeout(() => {
+      setAdminClicks(0);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -942,7 +954,17 @@ const App = () => {
       </AnimatePresence>
 
       <motion.nav animate={{ opacity: (isHeaderVisible || isMenuOpen) ? 1 : 0, y: (isHeaderVisible || isMenuOpen) ? 0 : -20 }} transition={{ duration: 0.4 }} className={`fixed top-0 w-full z-50 bg-black/10 backdrop-blur-lg border-b border-white/5 px-6 py-6 flex justify-between items-center ${(isHeaderVisible || isMenuOpen) ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-        <button onClick={() => { setView('home'); handleLogoClick(); }} className="text-xl font-bold tracking-[0.3em] text-white/90 drop-shadow-lg z-50 select-none active:scale-95 transition-transform">{brandName}</button>
+        <button 
+          onClick={(e) => { 
+            // Prevent default behavior just in case, though usually not needed for buttons
+            // e.preventDefault(); 
+            setView('home'); 
+            handleLogoClick(); 
+          }} 
+          className="text-xl font-bold tracking-[0.3em] text-white/90 drop-shadow-lg z-50 select-none active:scale-95 transition-transform"
+        >
+          {brandName}
+        </button>
         <div className="flex items-center gap-6">
           <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:bg-white/10 rounded-full transition-colors z-50">
             <ShoppingBag size={20} className="text-white" />
@@ -1000,8 +1022,16 @@ const App = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {isAdminLoginOpen && <AdminLogin onLogin={() => { setIsAdminLoginOpen(false); setIsAdminDashboardOpen(true); }} onClose={() => setIsAdminLoginOpen(false)} />}
-        {isAdminDashboardOpen && <AdminDashboard products={products} setProducts={setProducts} onClose={() => setIsAdminDashboardOpen(false)} />}
+        {isAdminLoginOpen && (
+          <div className="relative z-[200]"> {/* Boosted z-index for visibility */}
+            <AdminLogin onLogin={() => { setIsAdminLoginOpen(false); setIsAdminDashboardOpen(true); }} onClose={() => setIsAdminLoginOpen(false)} />
+          </div>
+        )}
+        {isAdminDashboardOpen && (
+          <div className="relative z-[200]"> {/* Boosted z-index for visibility */}
+            <AdminDashboard products={products} setProducts={setProducts} onClose={() => setIsAdminDashboardOpen(false)} />
+          </div>
+        )}
       </AnimatePresence>
 
       <AnimatePresence mode="wait">
