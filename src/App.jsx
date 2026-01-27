@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import { ChevronRight, Menu, X, ArrowRight, Instagram, MessageCircle, Plus, Quote, ShoppingBag, ArrowLeft, Layers, Ruler, PenTool } from 'lucide-react';
+import { motion, AnimatePresence, useScroll, useTransform, wrap } from 'framer-motion';
+import { ChevronRight, ChevronLeft, Menu, X, ArrowRight, Instagram, MessageCircle, Plus, Quote, ShoppingBag, ArrowLeft, Layers, Ruler, PenTool, Lock, Save, Trash2, RotateCcw, Upload, Image as ImageIcon } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const brandName = "RICKY STAPLE";
 const instagramLink = "https://instagram.com/rickystaple"; 
 const whatsappNumber = "263777271697"; 
 const GA_MEASUREMENT_ID = "G-R4PGJN1JSQ"; 
+const ADMIN_PIN = "2026"; // Simple PIN for the Admin Dashboard
 
 // --- ANALYTICS ---
 const logEvent = (eventName, params = {}) => {
@@ -15,26 +16,302 @@ const logEvent = (eventName, params = {}) => {
 };
 
 // --- DATA (Linked to Clean Single-Extension Filenames) ---
-// Updated Lookbook to feature the Earth Tones (Olive, Green, Brown)
-const lookbook = [
+const INITIAL_LOOKBOOK = [
   { id: 1, title: "Vintage Archive", image: "/archive-olive.jpg", product: { name: "Archive Olive", price: 25 } },
   { id: 2, title: "Natural Wilderness", image: "/forest-green.jpg", product: { name: "Forest Green", price: 25 } },
   { id: 3, title: "Earthen Tones", image: "/mocha-brown.jpg", product: { name: "Mocha Brown", price: 25 } }
 ];
 
-const products = [
-  { id: 1, name: "Obsidian Black", price: 25, stock: "04/10", image: "/obsidian-black.png", description: "Deep matte black finish. 260GSM heavyweight cotton. Pre-shrunk and engineered for the perfect drape." },
-  { id: 2, name: "Bone Off-White", price: 25, stock: "03/10", image: "/bone-white.png", description: "Natural unbleached tone. 260GSM heavyweight cotton. Soft hand-feel with structural integrity." },
-  { id: 3, name: "Engineered Charcoal", price: 25, stock: "03/10", image: "/charcoal-grey.jpg", description: "Industrial slate grey. 260GSM heavyweight cotton. Reactive dyed for lasting color depth." },
-  { id: 4, name: "Archive Olive", price: 25, stock: "02/10", image: "/archive-olive.jpg", description: "Vintage washed earth tone. 260GSM heavyweight cotton. A subtle, sophisticated essential." },
-  { id: 5, name: "Forest Green", price: 25, stock: "Sold Out", image: "/forest-green.jpg", description: "Deep earthy green. 260GSM heavyweight cotton. Inspired by Zimbabwean landscapes." },
-  { id: 6, name: "Mocha Brown", price: 25, stock: "01/10", image: "/mocha-brown.jpg", description: "Rich coffee tone. 260GSM heavyweight cotton. Warm, neutral, and versatile." }
+const INITIAL_PRODUCTS = [
+  { id: 1, name: "Obsidian Black", price: 25, stock: "04/10", images: ["/obsidian-black.png"], description: "Deep matte black finish. 260GSM heavyweight cotton. Pre-shrunk and engineered for the perfect drape." },
+  { id: 2, name: "Bone Off-White", price: 25, stock: "03/10", images: ["/bone-white.png"], description: "Natural unbleached tone. 260GSM heavyweight cotton. Soft hand-feel with structural integrity." },
+  { id: 3, name: "Engineered Charcoal", price: 25, stock: "03/10", images: ["/charcoal-grey.jpg"], description: "Industrial slate grey. 260GSM heavyweight cotton. Reactive dyed for lasting color depth." },
+  { id: 4, name: "Archive Olive", price: 25, stock: "02/10", images: ["/archive-olive.jpg"], description: "Vintage washed earth tone. 260GSM heavyweight cotton. A subtle, sophisticated essential." },
+  { id: 5, name: "Forest Green", price: 25, stock: "Sold Out", images: ["/forest-green.jpg"], description: "Deep earthy green. 260GSM heavyweight cotton. Inspired by Zimbabwean landscapes." },
+  { id: 6, name: "Mocha Brown", price: 25, stock: "01/10", images: ["/mocha-brown.jpg"], description: "Rich coffee tone. 260GSM heavyweight cotton. Warm, neutral, and versatile." }
 ];
 
-// Alpha Collection: Features Black, Bone, Charcoal (First 3 items)
-const alphaCollection = products.slice(0, 3);
-
 // --- HELPER COMPONENTS ---
+
+// New Component: Smart Mobile Scroll Hint
+const ScrollHint = () => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    whileInView={{ opacity: [0, 1, 1, 0] }}
+    viewport={{ once: true, margin: "-20%" }} // Triggers when section is well into view
+    transition={{ duration: 3.5, times: [0, 0.1, 0.8, 1] }} // Fast fade in, hold, fade out
+    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none md:hidden"
+  >
+    <div className="bg-black/80 backdrop-blur-md border border-white/10 px-5 py-3 rounded-full flex items-center gap-3 shadow-2xl">
+      <span className="text-[10px] uppercase tracking-[0.2em] text-white font-bold">Swipe</span>
+      <motion.div 
+        animate={{ x: [0, 5, 0] }} 
+        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <ArrowRight size={14} className="text-white" />
+      </motion.div>
+    </div>
+  </motion.div>
+);
+
+const AdminDashboard = ({ products, setProducts, onClose }) => {
+  const [editedProducts, setEditedProducts] = useState(products);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    price: 25,
+    stock: "10/10",
+    description: "260GSM heavyweight cotton. Authentic quality.",
+    images: []
+  });
+
+  const handleChange = (id, field, value) => {
+    const updated = editedProducts.map(p => p.id === id ? { ...p, [field]: value } : p);
+    setEditedProducts(updated);
+    setHasChanges(true);
+  };
+
+  const handleImageUpload = (e, id = null) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (id === 'new') {
+          setNewProduct({ ...newProduct, images: [...newProduct.images, reader.result] });
+        } else {
+          const product = editedProducts.find(p => p.id === id);
+          if (product) {
+            handleChange(id, 'images', [...product.images, reader.result]);
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = (productId, imageIndex) => {
+    if (productId === 'new') {
+      const updatedImages = newProduct.images.filter((_, i) => i !== imageIndex);
+      setNewProduct({ ...newProduct, images: updatedImages });
+    } else {
+      const product = editedProducts.find(p => p.id === productId);
+      if (product) {
+        const updatedImages = product.images.filter((_, i) => i !== imageIndex);
+        handleChange(productId, 'images', updatedImages);
+      }
+    }
+  };
+
+  const deleteProduct = (id) => {
+    if (window.confirm("Are you sure you want to delete this product? This cannot be undone.")) {
+      const updated = editedProducts.filter(p => p.id !== id);
+      setEditedProducts(updated);
+      setHasChanges(true);
+    }
+  };
+
+  const handleAddNew = () => {
+    if (!newProduct.name || newProduct.images.length === 0) {
+      alert("Please provide at least a Name and one Image.");
+      return;
+    }
+    const newId = Math.max(...editedProducts.map(p => p.id), 0) + 1;
+    const productToAdd = { ...newProduct, id: newId };
+    setEditedProducts([...editedProducts, productToAdd]);
+    setHasChanges(true);
+    setIsAdding(false);
+    setNewProduct({ name: "", price: 25, stock: "10/10", description: "260GSM heavyweight cotton. Authentic quality.", images: [] });
+  };
+
+  const saveChanges = () => {
+    setProducts(editedProducts);
+    setHasChanges(false);
+    localStorage.setItem('rs_products', JSON.stringify(editedProducts)); 
+    logEvent('admin_update', { timestamp: new Date() });
+    alert("Database Updated Successfully");
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-[#0f1115] text-white overflow-y-auto">
+      <div className="max-w-7xl mx-auto p-6 pb-32">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 border-b border-white/10 pb-6 gap-6">
+          <div>
+            <h2 className="text-3xl font-serif italic text-white flex items-center gap-3">
+              <Lock size={24} className="text-red-500" /> Control Center
+            </h2>
+            <p className="text-[10px] tracking-[0.3em] uppercase text-gray-500 mt-2">Manage Inventory & Gallery</p>
+          </div>
+          <div className="flex gap-4">
+            <button onClick={() => setIsAdding(!isAdding)} className={`px-6 py-3 rounded-sm text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 transition-all ${isAdding ? 'bg-white/10 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
+              {isAdding ? <X size={14}/> : <Plus size={14}/>} {isAdding ? "Cancel" : "Add Product"}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full"><X /></button>
+          </div>
+        </div>
+
+        {/* --- ADD NEW PRODUCT FORM --- */}
+        <AnimatePresence>
+          {isAdding && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }} 
+              animate={{ opacity: 1, height: "auto" }} 
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-white/5 border border-white/10 p-6 rounded-sm mb-12 overflow-hidden"
+            >
+              <h3 className="text-xl font-serif italic text-white mb-6">New Drop Item</h3>
+              <div className="flex flex-col md:flex-row gap-8">
+                <div className="w-full md:w-1/3 space-y-4">
+                    <div className="aspect-[3/4] bg-black/40 border-2 border-dashed border-white/20 rounded-sm relative flex flex-col items-center justify-center group overflow-hidden">
+                    {newProduct.images.length > 0 ? (
+                        <img src={newProduct.images[0]} alt="Main Preview" className="w-full h-full object-cover absolute inset-0" />
+                    ) : (
+                        <div className="text-center p-4">
+                        <ImageIcon className="w-8 h-8 text-white/30 mx-auto mb-2" />
+                        <span className="text-[10px] uppercase tracking-widest text-gray-500">Add Main Image</span>
+                        </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'new')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                    
+                    {newProduct.images.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                             {newProduct.images.map((img, idx) => (
+                                 <div key={idx} className="relative w-16 h-20 flex-shrink-0 border border-white/10 group">
+                                     <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                                     <button onClick={() => removeImage('new', idx)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md z-10">
+                                         <X size={12} />
+                                     </button>
+                                 </div>
+                             ))}
+                             <div className="w-16 h-20 flex-shrink-0 border border-dashed border-white/20 flex items-center justify-center relative cursor-pointer hover:border-white/50 bg-white/5">
+                                 <Plus size={16} className="text-white/50" />
+                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'new')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                             </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Product Name</label>
+                    <input type="text" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-serif italic" placeholder="e.g. Midnight Blue" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Price ($)</label>
+                    <input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-mono" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Stock (Display Only)</label>
+                    <input type="text" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-mono" placeholder="10/10" />
+                  </div>
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Description</label>
+                    <textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-light h-24" />
+                  </div>
+                  <div className="col-span-1 md:col-span-2 pt-4">
+                     <button onClick={handleAddNew} className="w-full py-4 bg-white text-black text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors">Launch Product</button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* --- EXISTING PRODUCTS LIST --- */}
+        <div className="grid gap-6">
+          {editedProducts.map((item) => (
+            <div key={item.id} className="bg-white/5 border border-white/5 p-4 rounded-sm flex flex-col md:flex-row gap-6 items-start group hover:border-white/20 transition-colors">
+              <div className="w-full md:w-1/4">
+                 <div className="aspect-[3/4] relative mb-4">
+                     <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover rounded-sm bg-black/20" />
+                     <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 text-[8px] uppercase text-white rounded-sm">Display</div>
+                 </div>
+                 
+                 <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                     {item.images.slice(1).map((img, idx) => (
+                         <div key={idx} className="relative w-16 h-20 flex-shrink-0 border border-white/10 bg-black/20">
+                             <img src={img} alt="Gal" className="w-full h-full object-cover" />
+                             {/* Mobile-friendly delete button (bigger touch target) */}
+                             <button onClick={() => removeImage(item.id, idx + 1)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md z-10">
+                                 <X size={12} />
+                             </button>
+                         </div>
+                     ))}
+                     <div className="w-16 h-20 flex-shrink-0 border border-dashed border-white/20 flex items-center justify-center relative cursor-pointer hover:border-white/50 bg-white/5">
+                         <Plus size={16} className="text-white/50" />
+                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, item.id)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                     </div>
+                 </div>
+              </div>
+              
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full items-center pt-2">
+                <div className="md:col-span-1">
+                  <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Name</label>
+                  <input type="text" value={item.name} onChange={(e) => handleChange(item.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-serif italic" />
+                </div>
+                <div>
+                   <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Stock</label>
+                  <input type="text" value={item.stock} onChange={(e) => handleChange(item.id, 'stock', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-mono text-left md:text-center" />
+                </div>
+                <div>
+                   <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Price</label>
+                  <input type="number" value={item.price} onChange={(e) => handleChange(item.id, 'price', parseFloat(e.target.value))} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-mono" />
+                </div>
+                <div className="flex justify-end">
+                  <button onClick={() => deleteProduct(item.id)} className="p-3 bg-red-500/10 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all" title="Delete Product">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="fixed bottom-0 left-0 w-full p-6 bg-[#0f1115] border-t border-white/10 flex justify-end gap-4 backdrop-blur-md z-50">
+          <button onClick={() => setEditedProducts(products)} className="px-6 py-3 text-[10px] font-bold tracking-[0.2em] uppercase text-gray-400 hover:text-white flex items-center gap-2">
+            <RotateCcw size={14} /> Reset
+          </button>
+          <button onClick={saveChanges} disabled={!hasChanges} className={`px-8 py-3 text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 transition-all ${hasChanges ? 'bg-white text-black hover:bg-gray-200' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}>
+            <Save size={14} /> Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AdminLogin = ({ onLogin, onClose }) => {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (pin === ADMIN_PIN) {
+      onLogin();
+    } else {
+      setError(true);
+      setPin("");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-6">
+      <div className="w-full max-w-sm text-center">
+        <Lock className="w-8 h-8 text-white/50 mx-auto mb-6" />
+        <h3 className="text-xl font-serif italic text-white mb-8">Restricted Access</h3>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <input type="password" value={pin} onChange={(e) => { setPin(e.target.value); setError(false); }} placeholder="ENTER ACCESS CODE" className="w-full bg-transparent border-b border-white/20 py-3 text-center text-xl tracking-[1em] text-white focus:border-white outline-none placeholder:text-xs placeholder:tracking-normal placeholder:text-gray-600" autoFocus />
+          {error && <p className="text-red-500 text-[10px] tracking-widest uppercase animate-pulse">Access Denied</p>}
+          <div className="flex gap-4 justify-center">
+             <button type="button" onClick={onClose} className="text-xs text-gray-500 hover:text-white underline">Cancel</button>
+             <button type="submit" className="text-xs text-white border border-white/20 px-4 py-2 hover:bg-white hover:text-black transition-colors uppercase tracking-widest">Unlock</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const Countdown = () => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -93,11 +370,30 @@ const Footer = () => (
   </footer>
 );
 
-const ProductModal = ({ product, onClose, onAdd }) => {
+const ProductModal = ({ product, onClose, onAdd, allProducts }) => {
   if (!product) return null;
   const [size, setSize] = useState('M');
-  const defaultColor = products.find(p => p.name === product.name)?.name || 'Obsidian Black';
+  const defaultColor = allProducts.find(p => p.name === product.name)?.name || 'Obsidian Black';
   const [color, setColor] = useState(defaultColor);
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+
+  const images = product.images || (product.image ? [product.image] : []);
+
+  const nextImage = (e) => {
+    e?.stopPropagation();
+    setCurrentImgIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const prevImage = (e) => {
+    e?.stopPropagation();
+    setCurrentImgIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  // Swipe logic for mobile
+  const swipeConfidenceThreshold = 10000;
+  const swipePower = (offset, velocity) => {
+    return Math.abs(offset) * velocity;
+  };
 
   const colorOptions = [
     { name: "Obsidian Black", hex: "#111111" },
@@ -119,15 +415,60 @@ const ProductModal = ({ product, onClose, onAdd }) => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }} 
         animate={{ opacity: 1, scale: 1, y: 0 }} 
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-lg bg-[#0f1115]/90 backdrop-blur-xl border border-white/10 rounded-sm overflow-hidden shadow-2xl flex flex-col md:flex-row"
+        className="relative w-full max-w-lg bg-[#0f1115]/90 backdrop-blur-xl border border-white/10 rounded-sm overflow-hidden shadow-2xl flex flex-col md:flex-row h-full md:h-auto max-h-[90svh] overflow-y-auto md:overflow-hidden"
       >
-        <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 bg-black/20 hover:bg-white/20 rounded-full text-white transition-colors">
+        <button onClick={onClose} className="absolute top-4 right-4 z-20 p-2 bg-black/40 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-sm">
           <X size={20} />
         </button>
-        <div className="w-full md:w-1/2 aspect-square md:aspect-auto bg-black/20">
-          <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+        
+        {/* IMAGE CAROUSEL SECTION */}
+        <div className="w-full md:w-1/2 aspect-square md:aspect-auto bg-black/20 relative group shrink-0">
+          <AnimatePresence initial={false} custom={currentImgIndex}>
+            <motion.img 
+                key={currentImgIndex}
+                src={images[currentImgIndex]} 
+                alt={product.name}
+                className="w-full h-full object-cover absolute inset-0 cursor-grab active:cursor-grabbing"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ opacity: { duration: 0.2 } }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={1}
+                onDragEnd={(e, { offset, velocity }) => {
+                  const swipe = swipePower(offset.x, velocity.x);
+                  if (swipe < -swipeConfidenceThreshold) {
+                    nextImage();
+                  } else if (swipe > swipeConfidenceThreshold) {
+                    prevImage();
+                  }
+                }}
+            />
+          </AnimatePresence>
+          
+          {/* Carousel Arrows (Hidden on mobile generally, swipe is better) */}
+          {images.length > 1 && (
+            <>
+                <button onClick={prevImage} className="hidden md:block absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-black/20 hover:bg-black/50 text-white rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                    <ChevronLeft size={20} />
+                </button>
+                <button onClick={nextImage} className="hidden md:block absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-black/20 hover:bg-black/50 text-white rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                    <ChevronRight size={20} />
+                </button>
+                {/* Dots Indicator */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    {images.map((_, idx) => (
+                        <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${idx === currentImgIndex ? 'bg-white scale-125' : 'bg-white/30'}`} />
+                    ))}
+                </div>
+                {/* Mobile Swipe Hint (optional) */}
+                <div className="md:hidden absolute bottom-4 right-4 text-[8px] text-white/50 uppercase tracking-widest bg-black/40 px-2 py-1 rounded backdrop-blur-sm pointer-events-none">Swipe</div>
+            </>
+          )}
         </div>
-        <div className="w-full md:w-1/2 p-8 flex flex-col">
+
+        <div className="w-full md:w-1/2 p-5 md:p-8 flex flex-col h-auto">
           <h3 className="text-2xl font-serif italic text-white mb-2">{product.name}</h3>
           <p className="text-white/60 text-xs mb-6 leading-relaxed">{product.description}</p>
           
@@ -156,9 +497,9 @@ const ProductModal = ({ product, onClose, onAdd }) => {
             <p className="text-[10px] text-gray-400 mt-2 font-mono">{color}</p>
           </div>
 
-          <div className="mt-auto flex items-center justify-between pt-6 border-t border-white/10">
-            <span className="text-xl font-mono text-white">${product.price}</span>
-            <button onClick={() => onAdd(product, size, color)} className="bg-white text-black px-6 py-3 text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-gray-200 transition-colors">
+          <div className="mt-auto flex items-center justify-between pt-6 border-t border-white/10 gap-4">
+            <span className="text-xl font-mono text-white whitespace-nowrap">${product.price}</span>
+            <button onClick={() => onAdd(product, size, color)} className="w-full md:w-auto bg-white text-black px-6 py-4 md:py-3 text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-gray-200 transition-colors">
               Add to Cart
             </button>
           </div>
@@ -170,17 +511,14 @@ const ProductModal = ({ product, onClose, onAdd }) => {
 
 // --- PAGE COMPONENTS ---
 
-const LandingPage = ({ setView, handleQuickShop }) => {
+const LandingPage = ({ setView, handleQuickShop, products, lookbook }) => {
   const { scrollYProgress } = useScroll();
-
-  // Alpha Drop Scroll Logic
   const alphaScrollRef = useRef(null);
   const [isAlphaEnd, setIsAlphaEnd] = useState(false);
 
   const handleAlphaScroll = () => {
     if (alphaScrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = alphaScrollRef.current;
-      // Check if user is near the end of the scroll (20px threshold)
       if (scrollLeft + clientWidth >= scrollWidth - 20) {
         setIsAlphaEnd(true);
       } else {
@@ -189,9 +527,9 @@ const LandingPage = ({ setView, handleQuickShop }) => {
     }
   };
 
-  // Campaign Scroll Logic
   const campaignScrollRef = useRef(null);
   const [isCampaignEnd, setIsCampaignEnd] = useState(false);
+  const alphaCollection = products.slice(0, 3);
 
   const handleCampaignScroll = () => {
     if (campaignScrollRef.current) {
@@ -204,7 +542,6 @@ const LandingPage = ({ setView, handleQuickShop }) => {
     }
   };
 
-  // Track Page View
   useEffect(() => {
     logEvent('page_view', { page_title: 'Home' });
   }, []);
@@ -214,23 +551,14 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="relative h-[100svh] w-full flex flex-col items-center justify-center overflow-hidden">
           <div className="absolute inset-0 z-0 overflow-hidden bg-black">
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a] z-10" />
-            {/* HERO IMAGE: Linked to HERO PNG */}
             <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-60 grayscale" />
           </div>
           
           <div className="z-10 text-center px-4 relative max-w-5xl mx-auto flex flex-col items-center">
             <span className="text-[10px] tracking-[0.5em] uppercase text-gray-400 mb-6 block border-b border-white/20 pb-2">EST. HARARE 2026</span>
-            
-            <h2 className="text-6xl md:text-9xl font-sans font-black tracking-tighter mb-4 py-4 glass-text-hero leading-tight">
-              RICKY STAPLE
-            </h2>
-            
-            <p className="text-xl md:text-3xl font-serif italic text-white/90 mb-8 tracking-wide">
-              Premium Heavyweight Streetwear.
-            </p>
-
+            <h2 className="text-6xl md:text-9xl font-sans font-black tracking-tighter mb-4 py-4 glass-text-hero leading-tight">RICKY STAPLE</h2>
+            <p className="text-xl md:text-3xl font-serif italic text-white/90 mb-8 tracking-wide">Premium Heavyweight Streetwear.</p>
             <Countdown />
-            
             <button onClick={() => setView('shop')} className="mt-8 group relative inline-flex items-center gap-4 px-10 py-4 overflow-hidden rounded-sm bg-white text-black text-xs font-bold tracking-[0.3em] uppercase transition-all hover:bg-gray-200 hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <span className="relative z-10 flex items-center gap-2">Secure Your Piece <ChevronRight size={14} /></span>
             </button>
@@ -246,7 +574,6 @@ const LandingPage = ({ setView, handleQuickShop }) => {
       <section className="py-20 px-6 relative z-10 max-w-6xl mx-auto">
           <div className="flex flex-col md:grid md:grid-cols-2 gap-12 items-center">
             <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm order-2 md:order-1 shadow-2xl">
-               {/* FOUNDER IMAGE: Linked to FOUNDER JPG */}
                <img src="/founder-image.jpg" alt="Founder" className="w-full h-full object-cover opacity-80" />
                <div className="absolute bottom-4 left-4 text-[8px] tracking-[0.3em] uppercase text-white bg-black/50 px-2 py-1 backdrop-blur-md">The Engineer's Log</div>
             </div>
@@ -278,57 +605,30 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           <div className="max-w-7xl mx-auto">
             <div className="mb-8 flex justify-between items-end">
               <h2 className="text-3xl md:text-5xl font-serif italic tracking-wide mb-2 glass-text-green py-2">Campaign</h2>
-              
-              {/* MOBILE Scroll/View Indicator for Campaign */}
               <div className="md:hidden text-[10px] tracking-widest text-gray-500 h-6 flex items-end">
                 <AnimatePresence mode="wait">
                   {!isCampaignEnd ? (
-                    <motion.span 
-                      key="scroll"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="block"
-                    >
-                      SCROLL →
-                    </motion.span>
+                    <motion.span key="scroll" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="block">SCROLL →</motion.span>
                   ) : (
-                    <motion.button 
-                      key="view-all"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      onClick={() => setView('shop')}
-                      className="text-white border-b border-white pb-1"
-                    >
-                      VIEW ALL
-                    </motion.button>
+                    <motion.button key="view-all" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} onClick={() => setView('shop')} className="text-white border-b border-white pb-1">VIEW ALL</motion.button>
                   )}
                 </AnimatePresence>
               </div>
             </div>
 
-            {/* Scrollable Grid Container for Campaign */}
-            <div 
-              ref={campaignScrollRef}
-              onScroll={handleCampaignScroll}
-              className="flex overflow-x-auto gap-8 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible pb-4 md:pb-0"
-            >
-              {lookbook.map((look) => (
-                 <motion.div 
-                    key={look.id} 
-                    whileHover={{ y: -5 }}
-                    className="min-w-[85vw] snap-center md:min-w-0 md:w-auto aspect-[3/4] relative rounded-sm overflow-hidden group border border-white/5 bg-white/5 shadow-lg cursor-pointer" 
-                    onClick={() => handleQuickShop(look.product)}
-                 >
-                    {/* LOOKBOOK IMAGE */}
-                    <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
-                    <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
-                       <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
-                       <button className="text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-1 hover:border-white">Shop Look</button>
-                    </div>
-                 </motion.div>
-              ))}
+            <div className="relative">
+              <ScrollHint />
+              <div ref={campaignScrollRef} onScroll={handleCampaignScroll} className="flex overflow-x-auto gap-8 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible pb-4 md:pb-0 relative z-10">
+                {lookbook.map((look) => (
+                  <motion.div key={look.id} whileHover={{ y: -5 }} className="min-w-[85vw] snap-center md:min-w-0 md:w-auto aspect-[3/4] relative rounded-sm overflow-hidden group border border-white/5 bg-white/5 shadow-lg cursor-pointer" onClick={() => handleQuickShop(look.product)}>
+                      <img src={look.image} alt={look.title} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
+                      <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/80 to-transparent">
+                        <h3 className="text-xl font-serif italic text-white mb-2">{look.title}</h3>
+                        <button className="text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-1 hover:border-white">Shop Look</button>
+                      </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
       </section>
@@ -340,65 +640,34 @@ const LandingPage = ({ setView, handleQuickShop }) => {
                 <h2 className="text-4xl md:text-6xl font-serif italic tracking-wide mb-2 glass-text-red py-2">Alpha Drop</h2>
                 <p className="text-red-200/80 uppercase text-[10px] tracking-[0.4em] font-bold">Batch 01 // 10 Units // Live</p>
               </div>
-              
-              {/* DESKTOP View All Button */}
-              <button onClick={() => setView('shop')} className="hidden md:flex group items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-2 hover:border-white transition-all">
-                View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/>
-              </button>
-
-              {/* MOBILE Scroll/View Indicator */}
+              <button onClick={() => setView('shop')} className="hidden md:flex group items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-white border-b border-white/30 pb-2 hover:border-white transition-all">View All <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform"/></button>
               <div className="md:hidden text-[10px] tracking-widest text-gray-500 h-6 flex items-end">
                 <AnimatePresence mode="wait">
                   {!isAlphaEnd ? (
-                    <motion.span 
-                      key="scroll"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="block"
-                    >
-                      SCROLL →
-                    </motion.span>
+                    <motion.span key="scroll" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="block">SCROLL →</motion.span>
                   ) : (
-                    <motion.button 
-                      key="view-all"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      onClick={() => setView('shop')}
-                      className="text-white border-b border-white pb-1"
-                    >
-                      VIEW ALL
-                    </motion.button>
+                    <motion.button key="view-all" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} onClick={() => setView('shop')} className="text-white border-b border-white pb-1">VIEW ALL</motion.button>
                   )}
                 </AnimatePresence>
               </div>
             </div>
 
-            {/* Scrollable Grid Container */}
-            <div 
-              ref={alphaScrollRef}
-              onScroll={handleAlphaScroll}
-              className="flex overflow-x-auto gap-8 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible pb-4 md:pb-0"
-            >
-              {alphaCollection.map((item) => (
-                <motion.div 
-                  key={item.id} 
-                  whileHover={{ y: -10 }} 
-                  onClick={() => handleQuickShop(item)} 
-                  className="group cursor-pointer min-w-[85vw] snap-center md:min-w-0 md:w-auto"
-                >
-                  <div className="aspect-[3/4] overflow-hidden bg-black/40 mb-4 relative rounded-sm border border-white/10">
-                    {/* ALPHA DROP IMAGE */}
-                    <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-100 transition-all duration-700" />
-                    <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md px-3 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-red-500/50 shadow-lg">{item.stock} Left</div>
-                  </div>
-                  <div className="flex justify-between items-start mb-4 px-1">
-                    <h4 className="text-sm font-bold tracking-widest uppercase mb-1 text-white group-hover:text-white/80 transition-colors">{item.name}</h4>
-                    <span className="text-sm font-mono text-white/60 bg-white/5 px-2 py-1 rounded border border-white/5">${item.price}</span>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="relative">
+              <ScrollHint />
+              <div ref={alphaScrollRef} onScroll={handleAlphaScroll} className="flex overflow-x-auto gap-8 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible pb-4 md:pb-0 relative z-10">
+                {alphaCollection.map((item) => (
+                  <motion.div key={item.id} whileHover={{ y: -10 }} onClick={() => handleQuickShop(item)} className="group cursor-pointer min-w-[85vw] snap-center md:min-w-0 md:w-auto">
+                    <div className="aspect-[3/4] overflow-hidden bg-black/40 mb-4 relative rounded-sm border border-white/10">
+                      <img src={item.images ? item.images[0] : item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-100 transition-all duration-700" />
+                      <div className="absolute top-3 left-3 bg-red-600/90 backdrop-blur-md px-3 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-red-500/50 shadow-lg">{item.stock} Left</div>
+                    </div>
+                    <div className="flex justify-between items-start mb-4 px-1">
+                      <h4 className="text-sm font-bold tracking-widest uppercase mb-1 text-white group-hover:text-white/80 transition-colors">{item.name}</h4>
+                      <span className="text-sm font-mono text-white/60 bg-white/5 px-2 py-1 rounded border border-white/5">${item.price}</span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
       </section>
@@ -408,8 +677,8 @@ const LandingPage = ({ setView, handleQuickShop }) => {
   );
 };
 
+// --- RESTORED VISION PAGE ---
 const VisionPage = ({ setView }) => {
-  // Track Page View
   useEffect(() => {
     logEvent('page_view', { page_title: 'Vision' });
   }, []);
@@ -454,8 +723,8 @@ const VisionPage = ({ setView }) => {
   );
 };
 
-const ShopPage = ({ setView, setSelectedProduct }) => {
-  // Track Page View
+// --- RESTORED SHOP PAGE ---
+const ShopPage = ({ setView, setSelectedProduct, products }) => {
   useEffect(() => {
     logEvent('page_view', { page_title: 'Shop' });
   }, []);
@@ -470,10 +739,6 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
         </div>
       </div>
       
-      {/* UPDATED LAYOUT:
-        - Mobile: Horizontal Scroll (flex overflow-x-auto) to save vertical space.
-        - Desktop: Grid layout (grid-cols-3) for standard viewing.
-      */}
       <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-3 md:gap-x-4 md:gap-y-8 md:overflow-visible md:pb-0">
         {products.map((item) => (
           <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -5 }} onClick={() => {
@@ -481,8 +746,7 @@ const ShopPage = ({ setView, setSelectedProduct }) => {
             setSelectedProduct(item);
           }} className="group cursor-pointer min-w-[45vw] snap-center md:min-w-0 md:w-auto">
             <div className="aspect-[3/4] overflow-hidden bg-white/5 mb-4 relative rounded-sm border border-white/5 group-hover:border-white/20 transition-colors">
-              {/* SHOP PAGE IMAGE */}
-              <img src={item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
+              <img src={item.images ? item.images[0] : item.image} alt={item.name} loading="lazy" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" />
               {item.stock !== "Sold Out" ? (
                 <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 text-[8px] tracking-[0.3em] uppercase text-white border border-white/10">{item.stock} Left</div>
               ) : (
@@ -511,15 +775,38 @@ const App = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   
+  const [products, setProducts] = useState(() => {
+    const savedProducts = localStorage.getItem('rs_products');
+    let data = savedProducts ? JSON.parse(savedProducts) : INITIAL_PRODUCTS;
+    if (!Array.isArray(data)) return INITIAL_PRODUCTS;
+    return data.map(p => ({
+        ...p,
+        images: p.images || (p.image ? [p.image] : [])
+    }));
+  });
+  
+  const [lookbook, setLookbook] = useState(INITIAL_LOOKBOOK); 
+
+  const [adminClicks, setAdminClicks] = useState(0);
+  const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
+  const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   const { scrollY } = useScroll();
 
-  // Initialize GA on mount
+  const handleLogoClick = () => {
+    setAdminClicks(prev => prev + 1);
+    if (adminClicks + 1 === 5) {
+      setIsAdminLoginOpen(true);
+      setAdminClicks(0);
+    }
+    setTimeout(() => setAdminClicks(0), 2000);
+  };
+
   useEffect(() => {
     if (GA_MEASUREMENT_ID !== "G-XXXXXXXXXX" && !window.dataLayer) {
-      // Inject Google Analytics Script dynamically
       const script = document.createElement('script');
       script.async = true;
       script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
@@ -545,14 +832,13 @@ const App = () => {
     return () => unsubscribe();
   }, [scrollY]);
 
-  // Scroll to top on view change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [view]);
 
   const addToCart = (product, size, color) => {
     logEvent('add_to_cart', { item_name: product.name, size, color, value: product.price });
-    setCart([...cart, { ...product, selectedSize: size, selectedColor: color }]);
+    setCart([...cart, { ...product, image: product.images ? product.images[0] : product.image, selectedSize: size, selectedColor: color }]);
     setSelectedProduct(null);
     setIsCartOpen(true);
   };
@@ -573,7 +859,12 @@ const App = () => {
 
   const handleQuickShop = (lookProduct) => {
     logEvent('view_item', { item_name: lookProduct.name, source: 'lookbook' });
-    const fullProduct = products.find(p => p.name === lookProduct.name) || { ...lookProduct, description: "Limited Edition Campaign Item", stock: "Limited", image: lookbook.find(l => l.product.name === lookProduct.name)?.image };
+    const fullProduct = products.find(p => p.name === lookProduct.name) || { 
+        ...lookProduct, 
+        description: "Limited Edition Campaign Item", 
+        stock: "Limited", 
+        images: lookbook.find(l => l.product.name === lookProduct.name)?.image ? [lookbook.find(l => l.product.name === lookProduct.name).image] : []
+    };
     setSelectedProduct(fullProduct);
   };
 
@@ -590,19 +881,9 @@ const App = () => {
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
-
-        /* --- HERO GLOW (Slow Multi-Color Shift) --- */
         .glass-text-hero {
           color: rgba(255, 255, 255, 0.1); 
-          background: linear-gradient(
-            270deg,
-            #ff7eb3, 
-            #ff758c, 
-            #42d392, 
-            #647dee, 
-            #7f53ac, 
-            #ff7eb3
-          );
+          background: linear-gradient(270deg, #ff7eb3, #ff758c, #42d392, #647dee, #7f53ac, #ff7eb3);
           background-size: 400% 400%;
           -webkit-background-clip: text;
           background-clip: text;
@@ -610,16 +891,9 @@ const App = () => {
           animation: glass-shimmer 12s ease infinite;
           filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
         }
-
-        /* --- CAMPAIGN GLOW (Green/Teal) --- */
         .glass-text-green {
           color: rgba(52, 211, 153, 0.1);
-          background: linear-gradient(
-            110deg,
-            rgba(52, 211, 153, 0) 30%,
-            rgba(52, 211, 153, 0.8) 50%,
-            rgba(52, 211, 153, 0) 70%
-          );
+          background: linear-gradient(110deg, rgba(52, 211, 153, 0) 30%, rgba(52, 211, 153, 0.8) 50%, rgba(52, 211, 153, 0) 70%);
           background-size: 200% 100%;
           -webkit-background-clip: text;
           background-clip: text;
@@ -627,16 +901,9 @@ const App = () => {
           animation: glass-shimmer 5s ease-in-out infinite;
           filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.3));
         }
-
-        /* --- ALPHA DROP GLOW (Red/Crimson) --- */
         .glass-text-red {
           color: rgba(248, 113, 113, 0.1);
-          background: linear-gradient(
-            110deg,
-            rgba(248, 113, 113, 0) 30%,
-            rgba(248, 113, 113, 0.8) 50%,
-            rgba(248, 113, 113, 0) 70%
-          );
+          background: linear-gradient(110deg, rgba(248, 113, 113, 0) 30%, rgba(248, 113, 113, 0.8) 50%, rgba(248, 113, 113, 0) 70%);
           background-size: 200% 100%;
           -webkit-background-clip: text;
           background-clip: text;
@@ -646,7 +913,6 @@ const App = () => {
         }
       `}</style>
 
-      {/* --- BACKGROUND EFFECTS --- */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#000000]" />
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
@@ -675,12 +941,8 @@ const App = () => {
         )}
       </AnimatePresence>
 
-      <motion.nav 
-        animate={{ opacity: (isHeaderVisible || isMenuOpen) ? 1 : 0, y: (isHeaderVisible || isMenuOpen) ? 0 : -20 }}
-        transition={{ duration: 0.4 }}
-        className={`fixed top-0 w-full z-50 bg-black/10 backdrop-blur-lg border-b border-white/5 px-6 py-6 flex justify-between items-center ${(isHeaderVisible || isMenuOpen) ? 'pointer-events-auto' : 'pointer-events-none'}`}
-      >
-        <button onClick={() => setView('home')} className="text-xl font-bold tracking-[0.3em] text-white/90 drop-shadow-lg z-50">{brandName}</button>
+      <motion.nav animate={{ opacity: (isHeaderVisible || isMenuOpen) ? 1 : 0, y: (isHeaderVisible || isMenuOpen) ? 0 : -20 }} transition={{ duration: 0.4 }} className={`fixed top-0 w-full z-50 bg-black/10 backdrop-blur-lg border-b border-white/5 px-6 py-6 flex justify-between items-center ${(isHeaderVisible || isMenuOpen) ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+        <button onClick={() => { setView('home'); handleLogoClick(); }} className="text-xl font-bold tracking-[0.3em] text-white/90 drop-shadow-lg z-50 select-none active:scale-95 transition-transform">{brandName}</button>
         <div className="flex items-center gap-6">
           <button onClick={() => setIsCartOpen(true)} className="relative p-2 hover:bg-white/10 rounded-full transition-colors z-50">
             <ShoppingBag size={20} className="text-white" />
@@ -692,20 +954,11 @@ const App = () => {
         </div>
       </motion.nav>
 
-      {/* --- CART DRAWER (FIXED) --- */}
       <AnimatePresence>
         {isCartOpen && (
           <>
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]"
-            />
-            <motion.div 
-              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 right-0 w-full md:w-96 bg-[#0f1115] border-l border-white/10 z-[100] p-6 flex flex-col shadow-2xl"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]" />
+            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", stiffness: 300, damping: 30 }} className="fixed inset-y-0 right-0 w-full md:w-96 bg-[#0f1115] border-l border-white/10 z-[100] p-6 flex flex-col shadow-2xl">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-xl font-playfair italic text-white">Your Selection</h2>
                 <button onClick={() => setIsCartOpen(false)}><X size={20} className="text-white"/></button>
@@ -729,7 +982,6 @@ const App = () => {
                   <span className="text-sm uppercase tracking-widest text-gray-400">Total</span>
                   <span className="text-xl font-mono text-white">${cart.reduce((acc, item) => acc + item.price, 0)}</span>
                 </div>
-                {/* Fixed Checkout Button using handleCartCheckout */}
                 <button onClick={handleCartCheckout} className="w-full py-4 bg-white text-black text-xs font-bold tracking-[0.2em] uppercase hover:bg-gray-200 transition-colors">Checkout on WhatsApp</button>
               </div>
             </motion.div>
@@ -747,15 +999,20 @@ const App = () => {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {isAdminLoginOpen && <AdminLogin onLogin={() => { setIsAdminLoginOpen(false); setIsAdminDashboardOpen(true); }} onClose={() => setIsAdminLoginOpen(false)} />}
+        {isAdminDashboardOpen && <AdminDashboard products={products} setProducts={setProducts} onClose={() => setIsAdminDashboardOpen(false)} />}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {view === 'home' && (
           <motion.div key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <LandingPage setView={setView} handleQuickShop={handleQuickShop} />
+            <LandingPage setView={setView} handleQuickShop={handleQuickShop} products={products} lookbook={lookbook} />
           </motion.div>
         )}
         {view === 'shop' && (
           <motion.div key="shop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <ShopPage setView={setView} setSelectedProduct={setSelectedProduct} />
+            <ShopPage setView={setView} setSelectedProduct={setSelectedProduct} products={products} />
             <Footer />
           </motion.div>
         )}
@@ -768,9 +1025,8 @@ const App = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={addToCart} />}
+        {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} onAdd={addToCart} allProducts={products} />}
       </AnimatePresence>
-
     </div>
   );
 };
