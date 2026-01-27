@@ -5,7 +5,7 @@ import { ChevronRight, Menu, X, ArrowRight, Instagram, MessageCircle, Plus, Quot
 // --- CONFIGURATION ---
 const brandName = "RICKY STAPLE";
 const instagramLink = "https://instagram.com/rickystaple"; 
-const whatsappNumber = "263770000000"; 
+const whatsappNumber = "263777271697"; 
 const GA_MEASUREMENT_ID = "G-R4PGJN1JSQ"; 
 
 // --- ANALYTICS ---
@@ -215,7 +215,7 @@ const LandingPage = ({ setView, handleQuickShop }) => {
           <div className="absolute inset-0 z-0 overflow-hidden bg-black">
             <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/40 to-[#0a0a0a] z-10" />
             {/* HERO IMAGE: Linked to HERO PNG */}
-            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-60" />
+            <img src="/hero-image.png" alt="Hero" className="w-full h-full object-cover scale-105 opacity-60 grayscale" />
           </div>
           
           <div className="z-10 text-center px-4 relative max-w-5xl mx-auto flex flex-col items-center">
