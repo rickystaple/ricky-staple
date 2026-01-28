@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, wrap } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Menu, X, ArrowRight, Instagram, MessageCircle, Plus, Quote, ShoppingBag, ArrowLeft, Layers, Ruler, PenTool, Lock, Save, Trash2, RotateCcw, Upload, Image as ImageIcon, Crop, Check } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Menu, X, ArrowRight, Instagram, MessageCircle, Plus, Quote, ShoppingBag, ArrowLeft, Layers, Ruler, PenTool, Lock, Save, Trash2, RotateCcw, Upload, Image as ImageIcon, Check } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const brandName = "RICKY STAPLE";
@@ -106,6 +106,7 @@ const ImageCropper = ({ src, onComplete, onCancel }) => {
     // Center the context
     ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(zoom, zoom);
+    // Correct translation to account for zoom level
     ctx.translate(offset.x * scaleFactor / zoom, offset.y * scaleFactor / zoom);
     
     // Draw image centered
@@ -116,7 +117,7 @@ const ImageCropper = ({ src, onComplete, onCancel }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[250] bg-black flex flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 z-[250] bg-black/95 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#0f1115] border border-white/10 rounded-sm p-6 flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <h3 className="text-white font-serif italic text-xl">Adjust Image</h3>
@@ -197,7 +198,7 @@ const AdminDashboard = ({ products, setProducts, onClose }) => {
 
   // Cropper State
   const [cropImageSrc, setCropImageSrc] = useState(null);
-  const [cropTarget, setCropTarget] = useState(null); // { type: 'new' | 'edit', productId: number, imageIndex: number (optional) }
+  const [cropTarget, setCropTarget] = useState(null); // { type: 'new' | 'edit', productId: number }
 
   const handleChange = (id, field, value) => {
     const updated = editedProducts.map(p => p.id === id ? { ...p, [field]: value } : p);
