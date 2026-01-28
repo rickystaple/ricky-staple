@@ -54,6 +54,136 @@ const ScrollHint = () => (
   </motion.div>
 );
 
+// --- IMAGE CROPPER COMPONENT ---
+const ImageCropper = ({ src, onComplete, onCancel }) => {
+  const [zoom, setZoom] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imgRef = useRef(null);
+  const containerRef = useRef(null);
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setDragStart({ x: clientX - offset.x, y: clientY - offset.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setOffset({ x: clientX - dragStart.x, y: clientY - dragStart.y });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleSave = () => {
+    const canvas = document.createElement('canvas');
+    // Set high resolution for the output
+    canvas.width = 600;
+    canvas.height = 800; // 3:4 aspect ratio
+    const ctx = canvas.getContext('2d');
+
+    const image = imgRef.current;
+    // Calculate scaling ratio between displayed image and actual canvas
+    // We assume the container is 300x400 (display size) for calculation
+    const displayWidth = 300; 
+    const displayHeight = 400;
+    
+    // Fill background with black
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Calculate draw position
+    // The offset and zoom from the UI need to be scaled up to the canvas size (x2)
+    const scaleFactor = canvas.width / displayWidth;
+    
+    ctx.save();
+    // Center the context
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(zoom, zoom);
+    // Correct translation to account for zoom level
+    ctx.translate(offset.x * scaleFactor / zoom, offset.y * scaleFactor / zoom);
+    
+    // Draw image centered
+    ctx.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+    ctx.restore();
+
+    onComplete(canvas.toDataURL('image/jpeg', 0.9));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[250] bg-black/95 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[#0f1115] border border-white/10 rounded-sm p-6 flex flex-col gap-6">
+        <div className="flex justify-between items-center">
+          <h3 className="text-white font-serif italic text-xl">Adjust Image</h3>
+          <button onClick={onCancel} className="text-gray-500 hover:text-white"><X size={20} /></button>
+        </div>
+
+        {/* CROPPER AREA - Fixed 3:4 Aspect Ratio */}
+        <div 
+          className="relative w-[300px] h-[400px] mx-auto overflow-hidden bg-black/50 border-2 border-white/20 rounded-sm cursor-move touch-none"
+          ref={containerRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleMouseDown}
+          onTouchMove={handleMouseMove}
+          onTouchEnd={handleMouseUp}
+        >
+          <img 
+            ref={imgRef}
+            src={src} 
+            alt="Crop Target" 
+            className="absolute max-w-none select-none pointer-events-none"
+            style={{ 
+              transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              left: '50%',
+              top: '50%',
+              transformOrigin: 'center'
+            }}
+            draggable={false}
+          />
+          {/* Overlay Grid */}
+          <div className="absolute inset-0 pointer-events-none border border-white/10 grid grid-cols-3 grid-rows-3">
+             {[...Array(9)].map((_, i) => <div key={i} className="border border-white/5" />)}
+          </div>
+        </div>
+
+        {/* CONTROLS */}
+        <div className="space-y-4">
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-gray-500 block mb-2 flex justify-between">
+              <span>Zoom</span>
+              <span>{(zoom * 100).toFixed(0)}%</span>
+            </label>
+            <input 
+              type="range" 
+              min="0.1" 
+              max="3" 
+              step="0.01" 
+              value={zoom} 
+              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              className="w-full h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-white"
+            />
+          </div>
+          <div className="flex gap-4">
+            <button onClick={onCancel} className="flex-1 py-3 border border-white/20 text-white text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-white/5">Cancel</button>
+            <button onClick={handleSave} className="flex-1 py-3 bg-white text-black text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-gray-200 flex items-center justify-center gap-2">
+              <Check size={14} /> Apply
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminDashboard = ({ products, setProducts, onClose }) => {
   const [editedProducts, setEditedProducts] = useState(products);
   const [hasChanges, setHasChanges] = useState(false);
@@ -66,28 +196,43 @@ const AdminDashboard = ({ products, setProducts, onClose }) => {
     images: []
   });
 
+  // Cropper State
+  const [cropImageSrc, setCropImageSrc] = useState(null);
+  const [cropTarget, setCropTarget] = useState(null); // { type: 'new' | 'edit', productId: number }
+
   const handleChange = (id, field, value) => {
     const updated = editedProducts.map(p => p.id === id ? { ...p, [field]: value } : p);
     setEditedProducts(updated);
     setHasChanges(true);
   };
 
-  const handleImageUpload = (e, id = null) => {
+  const handleImageUpload = (e, type, productId = null) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (id === 'new') {
-          setNewProduct({ ...newProduct, images: [...newProduct.images, reader.result] });
-        } else {
-          const product = editedProducts.find(p => p.id === id);
-          if (product) {
-            handleChange(id, 'images', [...product.images, reader.result]);
-          }
-        }
+        // Instead of saving directly, open the Cropper
+        setCropImageSrc(reader.result);
+        setCropTarget({ type, productId });
       };
       reader.readAsDataURL(file);
     }
+    // Reset file input
+    e.target.value = '';
+  };
+
+  const handleCropComplete = (croppedImageBase64) => {
+    if (cropTarget.type === 'new') {
+      setNewProduct({ ...newProduct, images: [...newProduct.images, croppedImageBase64] });
+    } else if (cropTarget.type === 'edit' && cropTarget.productId) {
+      const product = editedProducts.find(p => p.id === cropTarget.productId);
+      if (product) {
+        handleChange(cropTarget.productId, 'images', [...product.images, croppedImageBase64]);
+      }
+    }
+    // Close Cropper
+    setCropImageSrc(null);
+    setCropTarget(null);
   };
 
   const removeImage = (productId, imageIndex) => {
@@ -133,151 +278,161 @@ const AdminDashboard = ({ products, setProducts, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0f1115] text-white overflow-y-auto">
-      <div className="max-w-7xl mx-auto p-6 pb-32">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 border-b border-white/10 pb-6 gap-6">
-          <div>
-            <h2 className="text-3xl font-serif italic text-white flex items-center gap-3">
-              <Lock size={24} className="text-red-500" /> Control Center
-            </h2>
-            <p className="text-[10px] tracking-[0.3em] uppercase text-gray-500 mt-2">Manage Inventory & Gallery</p>
-          </div>
-          <div className="flex gap-4">
-            <button onClick={() => setIsAdding(!isAdding)} className={`px-6 py-3 rounded-sm text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 transition-all ${isAdding ? 'bg-white/10 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
-              {isAdding ? <X size={14}/> : <Plus size={14}/>} {isAdding ? "Cancel" : "Add Product"}
-            </button>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full"><X /></button>
-          </div>
-        </div>
-
-        {/* --- ADD NEW PRODUCT FORM --- */}
-        <AnimatePresence>
-          {isAdding && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }} 
-              animate={{ opacity: 1, height: "auto" }} 
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-white/5 border border-white/10 p-6 rounded-sm mb-12 overflow-hidden"
-            >
-              <h3 className="text-xl font-serif italic text-white mb-6">New Drop Item</h3>
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="w-full md:w-1/3 space-y-4">
-                    <div className="aspect-[3/4] bg-black/40 border-2 border-dashed border-white/20 rounded-sm relative flex flex-col items-center justify-center group overflow-hidden">
-                    {newProduct.images.length > 0 ? (
-                        <img src={newProduct.images[0]} alt="Main Preview" className="w-full h-full object-cover absolute inset-0" />
-                    ) : (
-                        <div className="text-center p-4">
-                        <ImageIcon className="w-8 h-8 text-white/30 mx-auto mb-2" />
-                        <span className="text-[10px] uppercase tracking-widest text-gray-500">Add Main Image</span>
-                        </div>
-                    )}
-                    <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'new')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    </div>
-                    
-                    {newProduct.images.length > 0 && (
-                        <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-                             {newProduct.images.map((img, idx) => (
-                                 <div key={idx} className="relative w-16 h-20 flex-shrink-0 border border-white/10 group">
-                                     <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
-                                     <button onClick={() => removeImage('new', idx)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md z-10">
-                                         <X size={12} />
-                                     </button>
-                                 </div>
-                             ))}
-                             <div className="w-16 h-20 flex-shrink-0 border border-dashed border-white/20 flex items-center justify-center relative cursor-pointer hover:border-white/50 bg-white/5">
-                                 <Plus size={16} className="text-white/50" />
-                                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'new')} className="absolute inset-0 opacity-0 cursor-pointer" />
-                             </div>
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Product Name</label>
-                    <input type="text" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-serif italic" placeholder="e.g. Midnight Blue" />
-                  </div>
-                  <div>
-                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Price ($)</label>
-                    <input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-mono" />
-                  </div>
-                  <div>
-                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Stock (Display Only)</label>
-                    <input type="text" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-mono" placeholder="10/10" />
-                  </div>
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Description</label>
-                    <textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-light h-24" />
-                  </div>
-                  <div className="col-span-1 md:col-span-2 pt-4">
-                     <button onClick={handleAddNew} className="w-full py-4 bg-white text-black text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors">Launch Product</button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* --- EXISTING PRODUCTS LIST --- */}
-        <div className="grid gap-6">
-          {editedProducts.map((item) => (
-            <div key={item.id} className="bg-white/5 border border-white/5 p-4 rounded-sm flex flex-col md:flex-row gap-6 items-start group hover:border-white/20 transition-colors">
-              <div className="w-full md:w-1/4">
-                 <div className="aspect-[3/4] relative mb-4">
-                     <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover rounded-sm bg-black/20" />
-                     <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 text-[8px] uppercase text-white rounded-sm">Display</div>
-                 </div>
-                 
-                 <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-                     {item.images.slice(1).map((img, idx) => (
-                         <div key={idx} className="relative w-16 h-20 flex-shrink-0 border border-white/10 bg-black/20">
-                             <img src={img} alt="Gal" className="w-full h-full object-cover" />
-                             {/* Mobile-friendly delete button (bigger touch target) */}
-                             <button onClick={() => removeImage(item.id, idx + 1)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md z-10">
-                                 <X size={12} />
-                             </button>
-                         </div>
-                     ))}
-                     <div className="w-16 h-20 flex-shrink-0 border border-dashed border-white/20 flex items-center justify-center relative cursor-pointer hover:border-white/50 bg-white/5">
-                         <Plus size={16} className="text-white/50" />
-                         <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, item.id)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                     </div>
-                 </div>
-              </div>
-              
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full items-center pt-2">
-                <div className="md:col-span-1">
-                  <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Name</label>
-                  <input type="text" value={item.name} onChange={(e) => handleChange(item.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-serif italic" />
-                </div>
-                <div>
-                   <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Stock</label>
-                  <input type="text" value={item.stock} onChange={(e) => handleChange(item.id, 'stock', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-mono text-left md:text-center" />
-                </div>
-                <div>
-                   <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Price</label>
-                  <input type="number" value={item.price} onChange={(e) => handleChange(item.id, 'price', parseFloat(e.target.value))} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-mono" />
-                </div>
-                <div className="flex justify-end">
-                  <button onClick={() => deleteProduct(item.id)} className="p-3 bg-red-500/10 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all" title="Delete Product">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
+    <>
+      {cropImageSrc && (
+        <ImageCropper 
+          src={cropImageSrc} 
+          onComplete={handleCropComplete} 
+          onCancel={() => { setCropImageSrc(null); setCropTarget(null); }} 
+        />
+      )}
+      
+      <div className="fixed inset-0 z-[100] bg-[#0f1115] text-white overflow-y-auto">
+        <div className="max-w-7xl mx-auto p-6 pb-32">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 border-b border-white/10 pb-6 gap-6">
+            <div>
+              <h2 className="text-3xl font-serif italic text-white flex items-center gap-3">
+                <Lock size={24} className="text-red-500" /> Control Center
+              </h2>
+              <p className="text-[10px] tracking-[0.3em] uppercase text-gray-500 mt-2">Manage Inventory & Gallery</p>
             </div>
-          ))}
-        </div>
+            <div className="flex gap-4">
+              <button onClick={() => setIsAdding(!isAdding)} className={`px-6 py-3 rounded-sm text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 transition-all ${isAdding ? 'bg-white/10 text-white' : 'bg-white text-black hover:bg-gray-200'}`}>
+                {isAdding ? <X size={14}/> : <Plus size={14}/>} {isAdding ? "Cancel" : "Add Product"}
+              </button>
+              <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full"><X /></button>
+            </div>
+          </div>
 
-        <div className="fixed bottom-0 left-0 w-full p-6 bg-[#0f1115] border-t border-white/10 flex justify-end gap-4 backdrop-blur-md z-50">
-          <button onClick={() => setEditedProducts(products)} className="px-6 py-3 text-[10px] font-bold tracking-[0.2em] uppercase text-gray-400 hover:text-white flex items-center gap-2">
-            <RotateCcw size={14} /> Reset
-          </button>
-          <button onClick={saveChanges} disabled={!hasChanges} className={`px-8 py-3 text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 transition-all ${hasChanges ? 'bg-white text-black hover:bg-gray-200' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}>
-            <Save size={14} /> Save Changes
-          </button>
+          {/* --- ADD NEW PRODUCT FORM --- */}
+          <AnimatePresence>
+            {isAdding && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }} 
+                animate={{ opacity: 1, height: "auto" }} 
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-white/5 border border-white/10 p-6 rounded-sm mb-12 overflow-hidden"
+              >
+                <h3 className="text-xl font-serif italic text-white mb-6">New Drop Item</h3>
+                <div className="flex flex-col md:flex-row gap-8">
+                  <div className="w-full md:w-1/3 space-y-4">
+                      <div className="aspect-[3/4] bg-black/40 border-2 border-dashed border-white/20 rounded-sm relative flex flex-col items-center justify-center group overflow-hidden">
+                      {newProduct.images.length > 0 ? (
+                          <img src={newProduct.images[0]} alt="Main Preview" className="w-full h-full object-cover absolute inset-0" />
+                      ) : (
+                          <div className="text-center p-4">
+                          <ImageIcon className="w-8 h-8 text-white/30 mx-auto mb-2" />
+                          <span className="text-[10px] uppercase tracking-widest text-gray-500">Add Main Image</span>
+                          </div>
+                      )}
+                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'new')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      </div>
+                      
+                      {newProduct.images.length > 0 && (
+                          <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                              {newProduct.images.map((img, idx) => (
+                                  <div key={idx} className="relative w-16 h-20 flex-shrink-0 border border-white/10 group">
+                                      <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                                      <button onClick={() => removeImage('new', idx)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md z-10">
+                                          <X size={12} />
+                                      </button>
+                                  </div>
+                              ))}
+                              <div className="w-16 h-20 flex-shrink-0 border border-dashed border-white/20 flex items-center justify-center relative cursor-pointer hover:border-white/50 bg-white/5">
+                                  <Plus size={16} className="text-white/50" />
+                                  <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'new')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Product Name</label>
+                      <input type="text" value={newProduct.name} onChange={(e) => setNewProduct({...newProduct, name: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-serif italic" placeholder="e.g. Midnight Blue" />
+                    </div>
+                    <div>
+                      <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Price ($)</label>
+                      <input type="number" value={newProduct.price} onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value)})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-mono" />
+                    </div>
+                    <div>
+                      <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Stock (Display Only)</label>
+                      <input type="text" value={newProduct.stock} onChange={(e) => setNewProduct({...newProduct, stock: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-mono" placeholder="10/10" />
+                    </div>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-2">Description</label>
+                      <textarea value={newProduct.description} onChange={(e) => setNewProduct({...newProduct, description: e.target.value})} className="w-full bg-black/20 border border-white/10 p-3 text-sm text-white focus:border-white/50 outline-none font-light h-24" />
+                    </div>
+                    <div className="col-span-1 md:col-span-2 pt-4">
+                      <button onClick={handleAddNew} className="w-full py-4 bg-white text-black text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-gray-200 transition-colors">Launch Product</button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* --- EXISTING PRODUCTS LIST --- */}
+          <div className="grid gap-6">
+            {editedProducts.map((item) => (
+              <div key={item.id} className="bg-white/5 border border-white/5 p-4 rounded-sm flex flex-col md:flex-row gap-6 items-start group hover:border-white/20 transition-colors">
+                <div className="w-full md:w-1/4">
+                  <div className="aspect-[3/4] relative mb-4">
+                      <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover rounded-sm bg-black/20" />
+                      <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 text-[8px] uppercase text-white rounded-sm">Display</div>
+                  </div>
+                  
+                  <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                      {item.images.slice(1).map((img, idx) => (
+                          <div key={idx} className="relative w-16 h-20 flex-shrink-0 border border-white/10 bg-black/20">
+                              <img src={img} alt="Gal" className="w-full h-full object-cover" />
+                              <button onClick={() => removeImage(item.id, idx + 1)} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full shadow-md z-10">
+                                  <X size={12} />
+                              </button>
+                          </div>
+                      ))}
+                      <div className="w-16 h-20 flex-shrink-0 border border-dashed border-white/20 flex items-center justify-center relative cursor-pointer hover:border-white/50 bg-white/5">
+                          <Plus size={16} className="text-white/50" />
+                          {/* UPDATED: Pass 'edit' and productId */}
+                          <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'edit', item.id)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      </div>
+                  </div>
+                </div>
+                
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 w-full items-center pt-2">
+                  <div className="md:col-span-1">
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Name</label>
+                    <input type="text" value={item.name} onChange={(e) => handleChange(item.id, 'name', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-serif italic" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Stock</label>
+                    <input type="text" value={item.stock} onChange={(e) => handleChange(item.id, 'stock', e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-mono text-left md:text-center" />
+                  </div>
+                  <div>
+                    <label className="text-[8px] uppercase tracking-widest text-gray-500 block mb-1 md:hidden">Price</label>
+                    <input type="number" value={item.price} onChange={(e) => handleChange(item.id, 'price', parseFloat(e.target.value))} className="w-full bg-transparent border-b border-transparent focus:border-white/30 p-1 text-sm text-white outline-none font-mono" />
+                  </div>
+                  <div className="flex justify-end">
+                    <button onClick={() => deleteProduct(item.id)} className="p-3 bg-red-500/10 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all" title="Delete Product">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="fixed bottom-0 left-0 w-full p-6 bg-[#0f1115] border-t border-white/10 flex justify-end gap-4 backdrop-blur-md z-50">
+            <button onClick={() => setEditedProducts(products)} className="px-6 py-3 text-[10px] font-bold tracking-[0.2em] uppercase text-gray-400 hover:text-white flex items-center gap-2">
+              <RotateCcw size={14} /> Reset
+            </button>
+            <button onClick={saveChanges} disabled={!hasChanges} className={`px-8 py-3 text-[10px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 transition-all ${hasChanges ? 'bg-white text-black hover:bg-gray-200' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}>
+              <Save size={14} /> Save Changes
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -677,7 +832,6 @@ const LandingPage = ({ setView, handleQuickShop, products, lookbook }) => {
   );
 };
 
-// --- RESTORED VISION PAGE ---
 const VisionPage = ({ setView }) => {
   useEffect(() => {
     logEvent('page_view', { page_title: 'Vision' });
